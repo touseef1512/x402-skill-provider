@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# --- Binance Hackathon Custom Rules ---
+
+# Secrets
+.env
+
+# Database
+database/*.db
+*.sqlite3
