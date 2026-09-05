@@ -1,6 +1,8 @@
 import sqlite3
 import os
 import asyncio
+import json
+from pathlib import Path
 from flask import Flask, request, jsonify, render_template
 from skills.analyzer import ConvergenceAnalyzer
 
@@ -9,8 +11,54 @@ analyzer = ConvergenceAnalyzer()
 
 # Database path setup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = Path(BASE_DIR).parent
 DB_PATH = os.path.join(BASE_DIR, 'database', 'agents.db')
 SCHEMA_PATH = os.path.join(BASE_DIR, 'database', 'schema.sql')
+
+ARTIFACTS = {
+    "ledger": ROOT_DIR / "purchase_ledger.json",
+    "marketplace": ROOT_DIR / "marketplace_comparison.json",
+    "negotiations": ROOT_DIR / "negotiation_history.json",
+    "governor": ROOT_DIR / "safety_governor_log.json",
+    "events": ROOT_DIR / "dashboard_events.json",
+}
+
+TOTAL_BUDGET = float(os.getenv("TOTAL_BUDGET_USDC", "2.00"))
+
+def read_json_artifact(name, default):
+    path = ARTIFACTS[name]
+    try:
+        return json.loads(path.read_text()) if path.exists() else default
+    except (OSError, json.JSONDecodeError):
+        return default
+
+def dashboard_state():
+    ledger = read_json_artifact("ledger", [])
+    events = read_json_artifact("events", [])
+    marketplace = read_json_artifact("marketplace", {})
+    negotiations = read_json_artifact("negotiations", [])
+    governor_logs = read_json_artifact("governor", [])
+    spent = sum(float(entry.get("paid_usdc", 0)) for entry in ledger)
+    latest_halt = next(
+        (entry for entry in reversed(governor_logs)
+         if entry.get("event") == "circuit_breaker_halted"),
+        None,
+    )
+    return {
+        "budget": {
+            "total_usdc": TOTAL_BUDGET,
+            "spent_usdc": round(spent, 6),
+            "remaining_usdc": round(max(TOTAL_BUDGET - spent, 0), 6),
+        },
+        "reasoning": events[-50:],
+        "quotes": marketplace,
+        "settlements": ledger[-50:],
+        "negotiations": negotiations[-20:],
+        "governor": {
+            "halted": bool(latest_halt),
+            "latest_halt": latest_halt,
+        },
+    }
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -53,6 +101,10 @@ def verify_x402_payment(tx_hash, agent_id):
 def dashboard():
     return render_template('index.html')
 
+@app.route('/api/dashboard/state', methods=['GET'])
+def get_dashboard_state():
+    return jsonify(dashboard_state())
+
 @app.route('/api/v1/skill/convergence', methods=['POST'])
 def get_convergence_alpha():
     data = request.json
@@ -79,4 +131,4 @@ def get_convergence_alpha():
     }), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=int(os.getenv('DASHBOARD_PORT', '5050')), debug=False)

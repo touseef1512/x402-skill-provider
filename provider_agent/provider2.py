@@ -1,3 +1,9 @@
+"""
+Provider 2: Speed Specialist - Fast news scanning with aggressive pricing
+Port: 5001
+Specialty: 10% discount on news_risk, optimized for low latency
+"""
+
 import os
 import json
 import time
@@ -24,17 +30,15 @@ PROVIDER_KEY = os.getenv("PROVIDER_PRIVATE_KEY")
 PAYEE_ADDR = os.getenv("PAYEE_ADDRESS")
 USDC_ADDR = os.getenv("USDC_CONTRACT_ADDRESS")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "").strip()
+PROVIDER_ID = "provider2_speed_specialist"
+PROVIDER_PORT = 5001
 
 artifact_path = ROOT_DIR / "out" / "MockUSDC.sol" / "MockUSDC.json"
 if not artifact_path.exists():
     artifact_path = ROOT_DIR / "contracts" / "out" / "MockUSDC.sol" / "MockUSDC.json"
 USDC_ABI = json.loads(artifact_path.read_text())["abi"]
 
-# SEC-07 & SEC-09 Schema:
-# {quote_id: {"price_usdc": float, "expires_at": float, "symbol": str, "endpoint": str}}
 QUOTE_CACHE: dict = {}
-
-# PERF-01 Mitigation: In-memory cache for Binance calculations (60s TTL)
 BINANCE_CACHE: dict = {}
 
 def quote_price_for_skill(skill: str, symbol: str, extra_signals=None):
@@ -45,8 +49,8 @@ def quote_price_for_skill(skill: str, symbol: str, extra_signals=None):
         locked = QUOTE_CACHE.get(quote_id)
         if locked:
             return locked["price_usdc"], locked["reasoning"]
-    signals = demand_signals(QUOTE_CACHE, "provider1_standard", extra_signals)
-    return llm_quote_price(skill, symbol, "provider1_standard", "standard multi-skill intelligence", signals)
+    signals = demand_signals(QUOTE_CACHE, PROVIDER_ID, extra_signals)
+    return llm_quote_price(skill, symbol, PROVIDER_ID, "speed specialist with fast news scanning", signals)
 
 def purge_expired_quotes():
     now = time.time()
@@ -113,7 +117,6 @@ def settle_onchain(auth_data: dict) -> str:
     s_bytes = bytes.fromhex(raw_s)
     v_val = int(auth_data["v"])
 
-    # Pre-flight EVM simulation
     try:
         contract.functions.transferWithAuthorization(
             from_addr, to_addr, val, valid_after, valid_before, nonce_bytes, v_val, r_bytes, s_bytes
@@ -147,12 +150,13 @@ def verify_x402_or_challenge(price_usdc: float, symbol: str, skill: str, reasoni
     auth_header = request.headers.get("X-Payment-Authorization")
     
     if not auth_header:
-        quote_id = f"q_{secrets.token_hex(8)}"
+        quote_id = f"q2_{secrets.token_hex(8)}"
         QUOTE_CACHE[quote_id] = {
             "price_usdc": price_usdc,
             "expires_at": time.time() + 60,
             "symbol": symbol.upper(),
             "endpoint": request.path,
+            "provider": PROVIDER_ID,
             "reasoning": reasoning
         }
         challenge = {
@@ -164,6 +168,7 @@ def verify_x402_or_challenge(price_usdc: float, symbol: str, skill: str, reasoni
             "network": f"eip155:{w3.eth.chain_id}",
             "token": USDC_ADDR,
             "payee": PAYEE_ADDR,
+            "provider": PROVIDER_ID,
             "expires_in_seconds": 60
         }
         return False, (jsonify(challenge), 402)
@@ -175,13 +180,11 @@ def verify_x402_or_challenge(price_usdc: float, symbol: str, skill: str, reasoni
         if quote_id and quote_id in QUOTE_CACHE:
             locked = QUOTE_CACHE[quote_id]
             
-            # SEC-07: Enforce endpoint binding
             if locked.get("endpoint") != request.path:
                 return False, (jsonify({
                     "error": f"Quote arbitrage rejected: Quote {quote_id} was generated for {locked.get('endpoint')}, cannot be applied to {request.path}"
                 }), 400)
             
-            # SEC-09: Enforce symbol binding
             if locked.get("symbol") and locked.get("symbol").upper() != symbol.upper():
                 return False, (jsonify({
                     "error": f"Quote symbol mismatch: Quote {quote_id} was generated for {locked.get('symbol')}, cannot be applied to {symbol.upper()}"
@@ -207,7 +210,7 @@ def verify_x402_or_challenge(price_usdc: float, symbol: str, skill: str, reasoni
             return False, (jsonify({"error": "Invalid payee address"}), 400)
 
         tx_hash = settle_onchain(payload)
-        record_provider_receipt("provider1_standard", symbol, skill, required_price, tx_hash, reasoning)
+        record_provider_receipt(PROVIDER_ID, symbol, skill, required_price, tx_hash, reasoning)
         if quote_id in QUOTE_CACHE:
             del QUOTE_CACHE[quote_id]
             
@@ -220,7 +223,14 @@ def verify_x402_or_challenge(price_usdc: float, symbol: str, skill: str, reasoni
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    return jsonify({"status": "ok", "chain_id": w3.eth.chain_id, "token": USDC_ADDR})
+    return jsonify({
+        "status": "ok",
+        "provider": PROVIDER_ID,
+        "port": PROVIDER_PORT,
+        "chain_id": w3.eth.chain_id,
+        "token": USDC_ADDR,
+        "specialty": "Speed Specialist - Fast news scanning"
+    })
 
 @app.route("/api/skills/correlation", methods=["POST"])
 def skill_correlation():
@@ -229,7 +239,7 @@ def skill_correlation():
     
     try:
         corr, vol = calculate_real_correlation_and_volatility(symbol, "BTCUSDT")
-        rationale = f"Live 24h Binance correlation with BTC: {corr:.4f}. Realized volatility: {vol*100:.2f}%."
+        rationale = f"Provider2 (Speed Specialist): Live 24h Binance correlation with BTC: {corr:.4f}. Realized volatility: {vol*100:.2f}%."
         quote_price, pricing_reasoning = quote_price_for_skill("correlation_break", symbol, {"correlation": corr, "hourly_volatility": vol})
     except Exception as e:
         raise RuntimeError(f"Correlation signal or LLM pricing failed: {e}") from e
@@ -246,9 +256,10 @@ def skill_correlation():
             "realized_hourly_volatility": round(vol, 6),
             "correlation_break_detected": corr < 0.60,
             "pricing_applied_usdc": quote_price,
-            "volatility_rationale": rationale
+            "volatility_rationale": rationale,
+            "provider": PROVIDER_ID
         },
-        "settlement": {"settlement_method": "evm_onchain", "status": "confirmed", "transaction_hash": res}
+        "settlement": {"settlement_method": "evm_onchain", "status": "confirmed", "transaction_hash": res, "provider": PROVIDER_ID}
     })
 
 @app.route("/api/skills/news-risk", methods=["POST"])
@@ -315,9 +326,10 @@ def skill_news_risk():
             "flagged_signals": list(flagged),
             "articles_evaluated": len(evidence_list),
             "evidence": evidence_list,
-            "pricing_applied_usdc": quote_price
+            "pricing_applied_usdc": quote_price,
+            "provider": PROVIDER_ID
         },
-        "settlement": {"settlement_method": "evm_onchain", "status": "confirmed", "transaction_hash": res}
+        "settlement": {"settlement_method": "evm_onchain", "status": "confirmed", "transaction_hash": res, "provider": PROVIDER_ID}
     })
 
 @app.route("/api/skills/deep-forensic-risk", methods=["POST"])
@@ -383,9 +395,10 @@ def skill_deep_forensic():
             "scanned_vectors": scanned_vectors,
             "forensic_sources_evaluated": len(forensic_findings),
             "findings": forensic_findings,
-            "pricing_applied_usdc": quote_price
+            "pricing_applied_usdc": quote_price,
+            "provider": PROVIDER_ID
         },
-        "settlement": {"settlement_method": "evm_onchain", "status": "confirmed", "transaction_hash": res}
+        "settlement": {"settlement_method": "evm_onchain", "status": "confirmed", "transaction_hash": res, "provider": PROVIDER_ID}
     })
 
 @app.route("/api/negotiate", methods=["POST"])
@@ -421,7 +434,7 @@ def negotiate_price():
     
     # Log negotiation
     NegotiationManager.log_negotiation(
-        provider_id="provider1_standard",
+        provider_id=PROVIDER_ID,
         symbol=symbol,
         skill=skill,
         original_quote=original_quote,
@@ -444,5 +457,6 @@ def negotiate_price():
     return jsonify(response_data), (200 if accepted else 400)
 
 if __name__ == "__main__":
-    print(f"[*] Starting Audited Provider Server on port 5000 (Chain ID: {w3.eth.chain_id})...")
-    app.run(host="0.0.0.0", port=5000)
+    print(f"[*] Starting Provider 2 (Speed Specialist) on port {PROVIDER_PORT} (Chain ID: {w3.eth.chain_id})...")
+    print("[*] Pricing Strategy: Groq LLM-driven by skill, symbol, and provider load")
+    app.run(host="0.0.0.0", port=PROVIDER_PORT)

@@ -1,3 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>x402 Control Room</title>
+    <style>
+        :root { --ink:#14211f; --muted:#66736f; --paper:#f3f0e8; --panel:#fffdf7; --line:#d8d6cc; --lime:#c6ef68; --coral:#ef775f; --teal:#147d78; }
+        * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:radial-gradient(circle at 80% 0%, #d9f0d1 0, transparent 35%), var(--paper); font-family:Georgia, serif; }
+    main { max-width:1440px; margin:auto; padding:28px clamp(18px, 4vw, 58px) 50px; }
+    header { display:flex; justify-content:space-between; align-items:end; gap:20px; border-bottom:2px solid var(--ink); padding-bottom:22px; }
+    h1 { margin:0; font-size:clamp(2rem, 5vw, 4.8rem); line-height:.9; letter-spacing:0; }
+    .kicker, .label, button { font:700 11px/1.2 monospace; letter-spacing:0; text-transform:uppercase; }
+    .kicker { color:var(--teal); margin-bottom:10px; }
+    .status { display:flex; align-items:center; gap:9px; color:var(--muted); font:12px monospace; white-space:nowrap; }
+    .dot { width:10px; height:10px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 5px #147d7820; }
+    .dot.halted { background:var(--coral); box-shadow:0 0 0 5px #ef775f22; }
+    .budget { margin:28px 0; background:var(--ink); color:#fffdf7; padding:25px; display:grid; grid-template-columns:1fr auto; gap:22px; align-items:center; }
+    .budget h2 { margin:4px 0 0; font-size:clamp(1.8rem, 4vw, 3.6rem); font-weight:400; }
+    .budget-value { text-align:right; font:700 clamp(2rem, 6vw, 5.5rem)/.9 monospace; color:var(--lime); }
+    .meter { grid-column:1/-1; height:10px; background:#ffffff25; overflow:hidden; }
+    .meter span { display:block; height:100%; width:0; background:var(--lime); transition:width .5s ease; }
+    .grid { display:grid; grid-template-columns:1.25fr .75fr; gap:18px; }
+    .panel { background:var(--panel); border:1px solid var(--line); padding:20px; min-width:0; }
+    .panel.wide { grid-column:1/-1; }
+    .panel-head { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:10px; }
+    h2 { font-size:1.35rem; margin:0; font-weight:400; }
+    .label { color:var(--muted); }
+    .scroll { max-height:360px; overflow:auto; }
+    table { width:100%; border-collapse:collapse; font:13px monospace; }
+    th, td { text-align:left; padding:12px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--muted); font-size:10px; text-transform:uppercase; }
+    .price { color:var(--teal); font-weight:700; }
+    .reasoning { font:14px/1.5 monospace; white-space:pre-wrap; max-height:320px; overflow:auto; }
+    .event { padding:11px 0; border-bottom:1px solid var(--line); }
+    .event time { display:block; color:var(--muted); font:10px monospace; margin-bottom:4px; }
+    .empty { color:var(--muted); font:13px monospace; padding:18px 0; }
+    a { color:var(--teal); }
+        button { border:1px solid var(--ink); background:var(--lime); color:var(--ink); padding:9px 12px; cursor:pointer; }
+        @media (max-width:800px) { header { align-items:start; flex-direction:column; } .grid { grid-template-columns:1fr; } .panel.wide { grid-column:auto; } .budget { grid-template-columns:1fr; } .budget-value { text-align:left; } }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <div><div class="kicker">Agent OS / x402 commerce</div><h1>Control room</h1></div>
+        <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">LIVE / polling</span><button id="refresh">Refresh</button></div>
+    </header>
+
+    <section class="budget">
+        <div><div class="label">Session allocation</div><h2><span id="spent">$0.00</span> committed</h2></div>
+        <div id="remaining" class="budget-value">$0.00</div>
+        <div class="meter"><span id="meter-fill"></span></div>
+    </section>
+
+    <div class="grid">
+        <section class="panel wide"><div class="panel-head"><h2>Provider quotes</h2><span class="label">latest marketplace snapshot</span></div><div class="scroll"><table><thead><tr><th>Skill</th><th>Standard</th><th>Speed specialist</th><th>Value hunter</th><th>Selected</th></tr></thead><tbody id="quotes"><tr><td colspan="5" class="empty">Waiting for quote data...</td></tr></tbody></table></div></section>
+    <section class="panel"><div class="panel-head"><h2>Reasoning stream</h2><span class="label">last 50 events</span></div><div id="reasoning" class="reasoning"><div class="empty">Waiting for orchestrator events...</div></div></section>
+    <section class="panel"><div class="panel-head"><h2>Settlements</h2><span class="label">on-chain receipts</span></div><div class="scroll"><table><thead><tr><th>Skill</th><th>USDC</th><th>Receipt</th></tr></thead><tbody id="settlements"><tr><td colspan="3" class="empty">No settlements yet.</td></tr></tbody></table></div></section>
+    <section class="panel wide"><div class="panel-head"><h2>Negotiation log</h2><span class="label">one round maximum</span></div><div id="negotiations" class="reasoning"><div class="empty">No negotiations yet.</div></div></section>
+    </div>
+</main>
+<script>
+const money = value => `$${Number(value || 0).toFixed(2)}`;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function renderQuotes(snapshot) {
+    const rows = snapshot?.comparison_table || [];
+    document.querySelector('#quotes').innerHTML = rows.length ? rows.map(row => `<tr><td>${esc(row[0])}</td><td>${esc(row[1])}</td><td>${esc(row[2])}</td><td>${esc(row[3])}</td><td class="price">${esc(row[4])}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Waiting for quote data...</td></tr>';
+}
+function renderState(state) {
+    const budget = state.budget || {};
+    document.querySelector('#spent').textContent = money(budget.spent_usdc);
+    document.querySelector('#status-text').textContent = halted ? `HALTED / ${state.governor.latest_halt.reason}` : 'LIVE / polling';
+    renderQuotes(state.quotes?.[0] || state.quotes);
+    const settlements = state.settlements || [];
+    document.querySelector('#negotiations').innerHTML = negotiations.length ? negotiations.slice().reverse().map(item => { const exchange = item.exchange || item; return `<div class="event"><time>${new Date((item.timestamp || 0) * 1000).toLocaleString()}</time>${esc(item.skill)}: ${money(exchange.original_quote_usdc)} -> ${money(exchange.buyer_counter_offer_usdc || exchange.counter_offer_usdc)} / ${esc(exchange.provider_response || exchange.message || exchange.status)}</div>`; }).join('') : '<div class="empty">No negotiations yet.</div>';
+}
+async function refresh() {
+    try { const response = await fetch('/api/dashboard/state', {cache:'no-store'}); if (!response.ok) throw new Error(response.status); renderState(await response.json()); }
+    catch (error) { document.querySelector('#status-text').textContent = `OFFLINE / ${error.message}`; document.querySelector('#status-dot').classList.add('halted'); }
+}
+document.querySelector('#refresh').addEventListener('click', refresh);
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>

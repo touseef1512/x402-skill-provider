@@ -1,231 +1,269 @@
+import hashlib
+import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from orchestrator_agent.binance_mcp_client import BinanceMCPClient
 import os
 import json
 import time
+import requests
 from pathlib import Path
-from typing import Dict, Any, List
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(dotenv_path=ROOT_DIR / ".env", override=True)
+load_dotenv(ROOT_DIR / ".env", override=True)
 
-from free_binance_skill import fetch_free_binance_signal
-from b402_buyer import B402BuyerClient
+from orchestrator_agent.b402_buyer import B402BuyerClient, SecurityException
+from orchestrator_agent.safety_governor import SafetyGovernor
+from orchestrator_agent.multi_provider_marketplace import PROVIDERS
+from groq import Groq
 
-SKILL_CATALOG = {
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+buyer = B402BuyerClient()
+
+CATALOG = {
+    "news_risk": {
+        "name": "Rapid News Exploit & Lawsuit Scanner",
+        "endpoint": "http://127.0.0.1:5000/api/skills/news-risk",
+        "price_desc": "Fast scan for breaking hacks, exploits, or regulatory actions.",
+        "expected_price": 0.50
+    },
     "correlation_break": {
         "name": "Cross-Asset Correlation Break Detector",
-        "url": "http://127.0.0.1:5000/api/skills/correlation",
-        "cost_usdc": 0.50,
-        "description": "Calculates statistical decoupling from BTC/ETH benchmarks over a 48h rolling window."
+        "endpoint": "http://127.0.0.1:5000/api/skills/correlation",
+        "price_desc": "Detects market decoupling from BTC and ETH.",
+        "expected_price": 1.00
     },
-    "news_risk": {
-        "name": "Regulatory & Exploit Security Scanner",
-        "url": "http://127.0.0.1:5000/api/skills/news-risk",
-        "cost_usdc": 0.50,
-        "description": "Live Tavily search scanning for hacks, lawsuits, outages, and vulnerabilities in the last 48h."
+    "deep_forensic_risk": {
+        "name": "Deep Smart-Contract Forensic Risk Auditor",
+        "endpoint": "http://127.0.0.1:5000/api/skills/deep-forensic-risk",
+        "price_desc": "Deep contract audit, CVE scan, and governance anomaly analysis.",
+        "expected_price": 0.75
     }
 }
 
-class TheAnalystOrchestrator:
-    def __init__(self, initial_budget_usdc: float = 2.00):
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_key or gemini_key.startswith("your_"):
-            raise ValueError("GEMINI_API_KEY is missing or unconfigured in .env")
+LEDGER_PATH = ROOT_DIR / "purchase_ledger.json"
+DASHBOARD_EVENTS_PATH = ROOT_DIR / "dashboard_events.json"
+
+def emit_dashboard_event(message, event_type="orchestrator"):
+    events = []
+    if DASHBOARD_EVENTS_PATH.exists():
+        try:
+            events = json.loads(DASHBOARD_EVENTS_PATH.read_text())
+        except Exception:
+            events = []
+    events.append({"timestamp": int(time.time()), "type": event_type, "message": message})
+    DASHBOARD_EVENTS_PATH.write_text(json.dumps(events[-200:], indent=2))
+
+def record_purchase_in_ledger(symbol, skill_key, paid_amount, tx_hash, entry_price, reasoning_text=None):
+    ledger = []
+    if LEDGER_PATH.exists():
+        try:
+            ledger = json.loads(LEDGER_PATH.read_text())
+        except Exception:
+            ledger = []
             
-        self.ai_client = genai.Client(api_key=gemini_key)
-        self.buyer_client = B402BuyerClient()
-        self.budget = initial_budget_usdc
-        self.initial_budget = initial_budget_usdc
-        self.model_name = "gemini-3.6-flash"
+    normalized_tx_hash = tx_hash if not tx_hash or tx_hash.startswith("0x") else f"0x{tx_hash}"
+    purchase_entry = {
+        "purchase_id": f"px_{int(time.time() * 1000)}",
+        "timestamp": int(time.time()),
+        "symbol": symbol,
+        "skill": skill_key,
+        "paid_usdc": paid_amount,
+        "entry_price": entry_price,
+        "tx_hash": normalized_tx_hash
+    }
+    
+    # Add reasoning hash if provided
+    if reasoning_text:
+        reasoning_hash = hashlib.sha256(reasoning_text.encode()).hexdigest()
+        purchase_entry["reasoning_hash"] = reasoning_hash
+        purchase_entry["reasoning_preview"] = reasoning_text[:100]
+    
+    ledger.append(purchase_entry)
+    LEDGER_PATH.write_text(json.dumps(ledger, indent=2))
+    print(f"    ↳ [Ledger] Recorded purchase {purchase_entry['purchase_id']} in purchase_ledger.json")
 
-    def _generate_with_retry(self, prompt: str, temperature: float = 0.2) -> str:
-        """Retries with exponential backoff on temporary 503 traffic spikes."""
-        for attempt in range(4):
-            try:
-                response = self.ai_client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        temperature=temperature
-                    )
-                )
-                return response.text
-            except Exception as e:
-                err_str = str(e)
-                if ("503" in err_str or "UNAVAILABLE" in err_str) and attempt < 3:
-                    wait_time = (attempt + 1) * 3
-                    print(f"[*] Gemini API 503 temporary demand spike. Retrying in {wait_time}s (Attempt {attempt+1}/4)...")
-                    time.sleep(wait_time)
-                    continue
-                raise e
+def fetch_baseline_market_data(symbol: str) -> dict:
+    mcp = BinanceMCPClient()
+    recon = mcp.get_market_recon(symbol)
+    ticker = recon.get("ticker", {})
+    last_px = float(ticker.get("lastPrice", 0))
+    pct_change = float(ticker.get("priceChangePercent", 0))
+    vol_quote = float(ticker.get("quoteVolume", 0))
+    transport = recon.get("transport")
+    reason = recon.get("degradation_reason")
+    if transport == "binance_mcp":
+        print(f"    ↳ [Binance Agent OS MCP] Connected via Streamable HTTP (Session: {recon.get("session_id")})")
+    else:
+        print(f"    ↳ [Binance Agent OS MCP] Notice: {reason}. Operating over Resilient Direct REST.")
+    print(mcp.get_transport_report())
+    return {
+        "symbol": symbol,
+        "transport": recon.get("transport"),
+        "last_price": last_px,
+        "change_24h_percent": pct_change,
+        "volume_24h_usdt": vol_quote,
+        "high_24h": float(ticker.get("highPrice", 0)),
+        "low_24h": float(ticker.get("lowPrice", 0)),
+        "weighted_avg_price": float(ticker.get("weightedAvgPrice", 0)),
+        "preliminary_bias": "BULLISH" if pct_change > 0 else "BEARISH"
+    }
 
-    def evaluate_budget_and_needs(self, symbol: str, free_data: Dict[str, Any]) -> Dict[str, Any]:
-        print("\n" + "="*70)
-        print("🧠 PHASE 1: AUTONOMOUS BUDGET REASONING (Gemini 3.6 Flash)")
-        print("="*70)
+def reason_and_procure(symbol: str, total_budget: float = 2.00, selected_providers: dict = None):
+    # Initialize circuit breaker
+    governor = SafetyGovernor()
+    emit_dashboard_event(f"Started analysis for {symbol}", "session_started")
+    
+    print(f"\n🚀 Launching The Analyst Orchestrator for: {symbol}")
+    print(f"[*] Total Allocation: ${total_budget:.2f} USDC")
+    
+    baseline = fetch_baseline_market_data(symbol)
+    
+    # Store reasoning prompt for hashing
+    reasoning_prompts = []
+    
+    print("\n" + "="*70)
+    print("🧠 PHASE 1: AUTONOMOUS BUDGET REASONING (Groq - GPT-OSS 120B)")
+    print("="*70)
+    
+    reasoning_prompt = f"""You are 'The Analyst', an autonomous hedge-fund intelligence agent allocating a ${total_budget:.2f} USDC budget.
+Free Baseline Signal from Binance:
+{json.dumps(baseline, indent=2)}
 
-        prompt = f"""
-You are "The Analyst", an autonomous economic AI agent evaluating crypto assets on Binance.
-You have a strict remaining budget of {self.budget:.2f} USDC. Every skill purchase costs REAL capital over the x402 protocol.
+Available Proprietary Skills:
+- 'news_risk': Fast scan for breaking hacks, exploits, or regulatory actions.
+- 'correlation_break': Detects market decoupling from BTC/ETH.
+- 'deep_forensic_risk': Deep contract audit, CVE scan, and governance anomaly analysis.
 
-Target Asset: {symbol}
-Free Baseline Market Data (0.00 USDC):
-- Current Price: ${free_data.get('last_price', 0):,.2f}
-- 24h Change: {free_data.get('price_change_percent_24h')}%
-- 24h Quote Volume: ${free_data.get('quote_volume_24h_usdt', 0):,.2f}
-- 24h VWAP: ${free_data.get('weighted_avg_price', 0):,.2f}
-- Baseline Heuristic: {free_data.get('baseline_bias')}
-
-Available Paid Skills Catalog:
-1. "correlation_break" (Cost: 0.50 USDC): Identifies statistical price decoupling from BTC/ETH.
-2. "news_risk" (Cost: 0.50 USDC): Scans real-time news for hacks, exploits, and regulatory enforcement.
-
-Task:
-1. Reason out loud about market uncertainty, risks, and whether each skill provides high expected information value.
-2. Decide which skills (if any) to purchase. Do not spend money needlessly.
-
-You must respond ONLY with a JSON object in this schema:
+Evaluate the baseline signal. Decide which skills are worth buying without exceeding ${total_budget:.2f}.
+Respond strictly in JSON format:
 {{
-  "chain_of_thought": "Detailed multi-sentence explanation of your economic logic and reasoning...",
-  "skills_to_buy": ["correlation_break"]
-}}
-"""
-        raw_text = self._generate_with_retry(prompt, temperature=0.2)
-        decision = json.loads(raw_text)
-        print(f"\n[Reasoning Log]:\n{decision.get('chain_of_thought')}\n")
-        print(f"[Procurement Decision]: {decision.get('skills_to_buy')}")
-        return decision
+  "comparative_reasoning": "...",
+  "selected_skills": ["skill_1", "skill_2"]
+}}"""
 
-    def execute_skill_purchases(self, symbol: str, skills_to_buy: List[str]) -> Dict[str, Any]:
-        print("\n" + "="*70)
-        print("💳 PHASE 2: AUTONOMOUS x402 COMMERCE EXECUTION")
-        print("="*70)
+    response = groq_client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": reasoning_prompt}],
+        temperature=0.2,
+        response_format={"type": "json_object"}
+    )
+    
+    plan = json.loads(response.choices[0].message.content)
+    selected_skills = plan.get("selected_skills", ["news_risk"])
+    
+    # Capture reasoning for ledger
+    comparative_reasoning = plan.get("comparative_reasoning", "")
+    reasoning_prompts.append({
+        "phase": "budget_allocation",
+        "text": comparative_reasoning
+    })
+    
+    print(f"\n[Comparative Reasoning Log]:\n{plan.get('comparative_reasoning')}\n")
+    print(f"[Procurement Decision]: {selected_skills}")
+    emit_dashboard_event(comparative_reasoning, "reasoning")
 
-        purchased_intel = {}
+    print("\n" + "="*70)
+    print("💳 PHASE 2: AUTONOMOUS x402 COMMERCE EXECUTION")
+    print("="*70)
+    
+    remaining_budget = total_budget
+    intelligence_payloads = {}
+    
+    for skill_key in selected_skills:
+        if skill_key not in CATALOG:
+            continue
+        skill_meta = CATALOG[skill_key]
+        provider_id = (selected_providers or {}).get(skill_key)
+        provider = next((item for item in PROVIDERS if item["id"] == provider_id), None)
+        purchase_endpoint = skill_meta["endpoint"]
+        if provider:
+            purchase_endpoint = f"http://127.0.0.1:{provider['port']}/api/{skill_meta['endpoint'].split('/api/', 1)[1]}"
+        
+        print(f"\n[*] Initiating x402 negotiation for: {skill_meta['name']} [{skill_meta['price_desc']}]")
+        if provider:
+            print(f"    ↳ Marketplace provider: {provider['id']} on port {provider['port']}")
+        emit_dashboard_event(f"Requesting {skill_key} within ${remaining_budget:.2f} budget", "purchase_requested")
+        
+        try:
+            # SEC-08 Enforcement: Pass remaining_budget as max_price_usdc
+            result = buyer.post_with_x402(
+                purchase_endpoint, 
+                {"symbol": symbol},
+                max_price_usdc=remaining_budget
+            )
+            
+            data = result.get("data", {})
+            settlement = result.get("settlement", {})
+            paid = data.get("pricing_applied_usdc", 0.50)
+            
+            # Check circuit breaker safety before recording
+            safe, halt_reason = governor.check_purchase_safety(symbol, skill_key, paid)
+            if not halt_reason:
+                print(f"[✓] Circuit breaker check passed")
+            
+            if not safe:
+                print(f"[!] Circuit breaker triggered: {halt_reason}")
+                print(f"[!] Halting orchestrator - no further purchases")
+                break
+            
+            remaining_budget -= paid
+            intelligence_payloads[skill_key] = data
+            
+            print(f"[✓] Successfully acquired {skill_meta['name']}. Remaining budget: ${remaining_budget:.2f} USDC")
+            emit_dashboard_event(f"Settled {skill_key} for ${paid:.2f}; ${remaining_budget:.2f} remains", "settlement")
+            print(f"    ↳ [Settlement Audit]")
+            print(f"      • Method: {settlement.get('settlement_method')}")
+            print(f"      • Status: {settlement.get('status')}")
+            print(f"      • Tx Hash: {settlement.get('transaction_hash')}")
+            
+            # Pass reasoning from budget allocation phase
+            record_purchase_in_ledger(
+                symbol, skill_key, paid, 
+                settlement.get("transaction_hash"), 
+                baseline["last_price"],
+                reasoning_text=comparative_reasoning
+            )
+            
+        except SecurityException as se:
+            print(f"[!] SECURITY HALT: {se}")
+            emit_dashboard_event(f"Security halt on {skill_key}: {se}", "security_halt")
+        except Exception as e:
+            print(f"[!] Procurement failed for {skill_key}: {e}")
+            emit_dashboard_event(f"Procurement failed for {skill_key}: {e}", "purchase_failed")
+            
+    print("\n" + "="*70)
+    print("🔍 PURCHASED PROPRIETARY INTELLIGENCE DUMP (Raw)")
+    print("="*70)
+    print(json.dumps(intelligence_payloads, indent=2))
+    
+    print("\n" + "="*70)
+    print("📊 PHASE 3: FINAL SYNTHESIS & ALPHA GENERATION (Groq - GPT-OSS 120B)")
+    print("="*70)
+    
+    synthesis_prompt = f"""You are 'The Analyst'. Formulate an investment read for {symbol}.
+Baseline Signal: {json.dumps(baseline)}
+Purchased Intelligence: {json.dumps(intelligence_payloads)}
+Spent Budget: ${total_budget - remaining_budget:.2f} USDC | Remaining: ${remaining_budget:.2f} USDC
 
-        for skill_key in skills_to_buy:
-            if skill_key not in SKILL_CATALOG:
-                continue
+Provide a concise, direct analysis with STANCE (BULLISH/BEARISH/NEUTRAL), CONFIDENCE %, SUMMARY, KEY FINDINGS, and CAPITAL MANAGEMENT."""
 
-            skill = SKILL_CATALOG[skill_key]
-            cost = skill["cost_usdc"]
-
-            if self.budget < cost:
-                print(f"[!] Insufficient budget ({self.budget:.2f} USDC) for {skill['name']}. Skipping.")
-                continue
-
-            print(f"\n[*] Initiating x402 micro-payment for: {skill['name']} (${cost:.2f} USDC)")
-            try:
-                data_response = self.buyer_client.post_with_x402(
-                    url=skill["url"],
-                    payload={"symbol": symbol}
-                )
-                
-                self.budget -= cost
-                purchased_intel[skill_key] = data_response.get("data", {})
-                
-                settlement = data_response.get("settlement", {})
-                print(f"[✓] Successfully acquired {skill['name']}. Remaining budget: ${self.budget:.2f} USDC")
-                print("    ↳ [Settlement Audit]")
-                print(f"      • Method: {settlement.get('settlement_method')}")
-                print(f"      • Status: {settlement.get('status')}")
-                if settlement.get("transaction_hash"):
-                    print(f"      • Tx Hash: {settlement.get('transaction_hash')}")
-                    if settlement.get("explorer_url"):
-                        print(f"      • Explorer: {settlement.get('explorer_url')}")
-                elif settlement.get("notice"):
-                    print(f"      • Notice: {settlement.get('notice')}")
-
-            except Exception as e:
-                print(f"[✗] Failed to purchase {skill['name']}: {e}")
-
-        return purchased_intel
-
-    def synthesize_final_verdict(
-        self, 
-        symbol: str, 
-        free_data: Dict[str, Any], 
-        paid_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        print("\n" + "="*70)
-        print("📊 PHASE 3: FINAL SYNTHESIS & ALPHA GENERATION")
-        print("="*70)
-
-        prompt = f"""
-You are "The Analyst", producing an institutional crypto analysis.
-Target Asset: {symbol}
-
-1. Free Baseline Signal:
-{json.dumps(free_data, indent=2)}
-
-2. Purchased Proprietary Intelligence (Over x402):
-{json.dumps(paid_data, indent=2)}
-
-Budget Accounting:
-- Initial Capital: ${self.initial_budget:.2f} USDC
-- Capital Spent: ${(self.initial_budget - self.budget):.2f} USDC
-- Capital Preserved: ${self.budget:.2f} USDC
-
-CRITICAL GROUNDING INSTRUCTIONS:
-- You MUST NOT state, infer, or hallucinate ANY external facts, token statistics, historical narratives, or price levels not explicitly provided in the Free Baseline or Purchased Proprietary Intelligence JSON above.
-- If the risk score is 0.0 with empty matches, state strictly that no active security, exploit, or regulatory risks were detected in the analyzed headlines.
-- Only cite prices, volumes, and evidence snippets that appear directly in the JSON above.
-
-Synthesize all evidence into a definitive market stance.
-Respond ONLY with a JSON object in this exact schema:
-{{
-  "market_stance": "BULLISH" | "BEARISH" | "NEUTRAL_UNCERTAIN",
-  "confidence_score": 0-100,
-  "executive_summary": "2-3 sentences summarizing the thesis grounded strictly in the provided data.",
-  "key_findings": [
-    "bullet 1 citing explicit data from above",
-    "bullet 2 citing explicit data from above",
-    "bullet 3 citing explicit data from above"
-  ],
-  "capital_efficiency_notes": "1 sentence on why the spent funds were or were not justified."
-}}
-"""
-        raw_text = self._generate_with_retry(prompt, temperature=0.1)
-        return json.loads(raw_text)
-
-    def run_analysis_cycle(self, symbol: str) -> Dict[str, Any]:
-        print(f"\n🚀 Launching The Analyst Orchestrator for: {symbol}")
-        print(f"[*] Total Allocation: ${self.budget:.2f} USDC")
-
-        free_signal = fetch_free_binance_signal(symbol)
-        procurement = self.evaluate_budget_and_needs(symbol, free_signal)
-        skills_to_buy = procurement.get("skills_to_buy", [])
-
-        paid_intel = {}
-        if skills_to_buy:
-            paid_intel = self.execute_skill_purchases(symbol, skills_to_buy)
-
-        print("\n" + "="*70)
-        print("🔍 PURCHASED PROPRIETARY INTELLIGENCE DUMP (Raw)")
-        print("="*70)
-        print(json.dumps(paid_intel, indent=2))
-
-        verdict = self.synthesize_final_verdict(symbol, free_signal, paid_intel)
-
-        print("\n" + "#"*70)
-        print(f"🎯 THE ANALYST FINAL READ: {symbol}")
-        print("#"*70)
-        print(f"STANCE: {verdict.get('market_stance')} | CONFIDENCE: {verdict.get('confidence_score')}%")
-        print(f"\nSUMMARY:\n{verdict.get('executive_summary')}")
-        print("\nKEY FINDINGS:")
-        for kf in verdict.get("key_findings", []):
-            print(f"  • {kf}")
-        print(f"\nCAPITAL MANAGEMENT:")
-        print(f"  • Spent: ${self.initial_budget - self.budget:.2f} USDC | Remaining: ${self.budget:.2f} USDC")
-        print(f"  • Note: {verdict.get('capital_efficiency_notes')}")
-        print("#"*70 + "\n")
-
-        return verdict
-
+    final_read = groq_client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": synthesis_prompt}],
+        temperature=0.2
+    ).choices[0].message.content
+    
+    print("\n" + "#"*70)
+    print(f"🎯 THE ANALYST FINAL READ: {symbol}")
+    print("#"*70)
+    print(final_read)
+    print("#"*70 + "\n")
 
 if __name__ == "__main__":
-    analyst = TheAnalystOrchestrator(initial_budget_usdc=2.00)
-    analyst.run_analysis_cycle("SOLUSDT")
+    reason_and_procure("SOLUSDT", total_budget=2.00)

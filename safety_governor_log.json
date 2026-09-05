@@ -1,0 +1,46 @@
+[
+  {
+    "timestamp": 1788559212,
+    "event": "circuit_breaker_halted",
+    "reason": "Spend velocity $2.50/min exceeds limit $2.00/min",
+    "state": {
+      "price_history_count": {
+        "news_risk": 4
+      },
+      "consecutive_failures": 0,
+      "last_failure_skill": null
+    }
+  },
+  {
+    "timestamp": 1788559212,
+    "event": "circuit_breaker_reset"
+  },
+  {
+    "timestamp": 1788559212,
+    "event": "circuit_breaker_halted",
+    "reason": "Spend velocity $2.60/min exceeds limit $2.00/min",
+    "state": {
+      "price_history_count": {
+        "news_risk": 4
+      },
+      "consecutive_failures": 1,
+      "last_failure_skill": "correlation_break"
+    }
+  },
+  {
+    "timestamp": 1788559212,
+    "event": "circuit_breaker_reset"
+  },
+  {
+    "timestamp": 1788559212,
+    "event": "circuit_breaker_halted",
+    "reason": "Spend velocity $2.40/min exceeds limit $1.00/min",
+    "state": {
+      "price_history_count": {
+        "news_risk": 4
+      },
+      "consecutive_failures": 0,
+      "last_failure_skill": null
+    }
+  }
+]

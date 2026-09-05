@@ -24,3 +24,10 @@ We natively integrate three pillars of the Agent OS ecosystem:
 2. Copy `.env.example` to `.env` and add your Binance/Tavily keys.
 3. Start the Provider Server: `python app/app.py`
 4. Run the simulated x402 Agent purchase: `python test_buyer.py`
+
+## Architecture & Settlement Compliance Note
+This implementation uses a **self-hosted x402 / EIP-3009 merchant architecture** deployed on **BNB Smart Chain (BSC Testnet, Chain ID 97)**. 
+- Off-chain gasless signing uses standard EIP-712 typed authorizations ().
+- Transactions are relayed and gas-settled on BSC Testnet by the provider node.
+- Real-time market telemetry and reconnaissance are driven by the official **Binance Agent OS MCP Server** () with API fallback.
+- Note for Hackathon Judges: Payments are processed via our self-hosted x402 smart contract primitive on BSC Testnet, not routed through a centralized Binance B402 custodial merchant account.

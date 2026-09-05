@@ -1,0 +1,226 @@
+[
+  {
+    "timestamp": 1788558389,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.50",
+        "$0.45",
+        "$0.48",
+        "\u2713 provider2_speed_specialist"
+      ],
+      [
+        "correlation_break",
+        "$0.60",
+        "$0.60",
+        "$0.50",
+        "\u2713 provider3_value_hunter"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.75",
+        "$0.85",
+        "$0.70",
+        "\u2713 provider3_value_hunter"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider2_speed_specialist",
+      "correlation_break": "provider3_value_hunter",
+      "deep_forensic_risk": "provider3_value_hunter"
+    }
+  },
+  {
+    "timestamp": 1788564675,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.50",
+        "$0.45",
+        "$0.48",
+        "\u2713 provider2_speed_specialist"
+      ],
+      [
+        "correlation_break",
+        "$0.60",
+        "$0.60",
+        "$0.50",
+        "\u2713 provider3_value_hunter"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.75",
+        "$0.85",
+        "$0.70",
+        "\u2713 provider3_value_hunter"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider2_speed_specialist",
+      "correlation_break": "provider3_value_hunter",
+      "deep_forensic_risk": "provider3_value_hunter"
+    }
+  },
+  {
+    "timestamp": 1788569223,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.25",
+        "$0.15",
+        "$0.15",
+        "\u2713 provider2_speed_specialist"
+      ],
+      [
+        "correlation_break",
+        "$0.15",
+        "$0.45",
+        "$0.15",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.75",
+        "$0.45",
+        "$0.45",
+        "\u2713 provider2_speed_specialist"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider2_speed_specialist",
+      "correlation_break": "provider1_standard",
+      "deep_forensic_risk": "provider2_speed_specialist"
+    }
+  },
+  {
+    "timestamp": 1788570930,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.05",
+        "$0.05",
+        "$0.10",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "correlation_break",
+        "$0.15",
+        "$0.15",
+        "$0.45",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.75",
+        "$0.45",
+        "$0.45",
+        "\u2713 provider2_speed_specialist"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider1_standard",
+      "correlation_break": "provider1_standard",
+      "deep_forensic_risk": "provider2_speed_specialist"
+    }
+  },
+  {
+    "timestamp": 1788571508,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.05",
+        "$0.05",
+        "$0.05",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "correlation_break",
+        "$0.15",
+        "$0.45",
+        "$0.15",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.75",
+        "$0.45",
+        "$0.45",
+        "\u2713 provider2_speed_specialist"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider1_standard",
+      "correlation_break": "provider1_standard",
+      "deep_forensic_risk": "provider2_speed_specialist"
+    }
+  },
+  {
+    "timestamp": 1788571880,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.05",
+        "$0.05",
+        "$0.05",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "correlation_break",
+        "$0.15",
+        "$0.20",
+        "$0.15",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.45",
+        "$0.45",
+        "$0.45",
+        "\u2713 provider1_standard"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider1_standard",
+      "correlation_break": "provider1_standard",
+      "deep_forensic_risk": "provider1_standard"
+    }
+  },
+  {
+    "timestamp": 1788620935,
+    "symbol": "SOLUSDT",
+    "comparison_table": [
+      [
+        "news_risk",
+        "$0.10",
+        "$0.05",
+        "$0.05",
+        "\u2713 provider2_speed_specialist"
+      ],
+      [
+        "correlation_break",
+        "$0.15",
+        "$0.15",
+        "$0.27",
+        "\u2713 provider1_standard"
+      ],
+      [
+        "deep_forensic_risk",
+        "$0.75",
+        "$0.45",
+        "$0.45",
+        "\u2713 provider2_speed_specialist"
+      ]
+    ],
+    "selected_providers": {
+      "news_risk": "provider2_speed_specialist",
+      "correlation_break": "provider1_standard",
+      "deep_forensic_risk": "provider2_speed_specialist"
+    }
+  }
+]
