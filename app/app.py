@@ -34,6 +34,7 @@ def read_json_artifact(name, default):
 
 def dashboard_state():
     ledger = read_json_artifact("ledger", [])
+    ledger = [entry for entry in ledger if entry.get("receipt_type") != "provider_pricing"]
     events = read_json_artifact("events", [])
     marketplace = read_json_artifact("marketplace", {})
     negotiations = read_json_artifact("negotiations", [])

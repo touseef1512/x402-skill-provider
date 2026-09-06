@@ -1,76 +1,6 @@
 [
   {
-    "timestamp": 1788559019,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.5,
-      "buyer_counter_offer_usdc": 0.42,
-      "buyer_reason": "Per-skill budget constraint - 0.42 USDC available",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 16.0%",
-      "discount_pct": 16.0
-    }
-  },
-  {
-    "timestamp": 1788559019,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.5,
-      "buyer_counter_offer_usdc": 0.35,
-      "buyer_reason": "Per-skill budget constraint - 0.42 USDC available",
-      "accepted": false,
-      "provider_response": "Counter-offer $0.3500 is below cost floor $0.4000 (gap: $0.0500). Offer rejected once - no further negotiation.",
-      "discount_pct": 30.0
-    }
-  },
-  {
-    "timestamp": 1788564675,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.5,
-      "buyer_counter_offer_usdc": 0.47,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 6.0%",
-      "discount_pct": 6.0
-    }
-  },
-  {
-    "timestamp": 1788569223,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.25,
-      "buyer_counter_offer_usdc": 0.24,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": false,
-      "provider_response": "Counter-offer $0.2400 is below cost floor $0.4000 (gap: $0.1600). Offer rejected once - no further negotiation.",
-      "discount_pct": 4.0
-    }
-  },
-  {
-    "timestamp": 1788570930,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.05,
-      "buyer_counter_offer_usdc": 0.05,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": false,
-      "provider_response": "Counter-offer $0.0500 is below cost floor $0.4000 (gap: $0.3500). Offer rejected once - no further negotiation.",
-      "discount_pct": 0.0
-    }
-  },
-  {
-    "timestamp": 1788571508,
+    "timestamp": 1788719650,
     "provider": "provider1_standard",
     "symbol": "SOLUSDT",
     "skill": "news_risk",
@@ -85,44 +15,44 @@
     }
   },
   {
-    "timestamp": 1788571556,
+    "timestamp": 1788719772,
     "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "correlation_break",
+    "symbol": "ETHUSDT",
+    "skill": "news_risk",
     "exchange": {
-      "original_quote_usdc": 0.15,
-      "client_claimed_original_quote_usdc": 0.01,
-      "buyer_counter_offer_usdc": 0.1,
-      "buyer_reason": "MORE_THAN_15_PERCENT_BELOW",
-      "accepted": false,
-      "provider_response": "Counter-offer $0.1000 is below cost floor $0.1275 (gap: $0.0275). Offer rejected once - no further negotiation.",
-      "discount_pct": 33.33
+      "original_quote_usdc": 0.05,
+      "client_claimed_original_quote_usdc": 0.05,
+      "buyer_counter_offer_usdc": 0.05,
+      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
+      "accepted": true,
+      "provider_response": "Counter-offer accepted. Discount: 0.0%",
+      "discount_pct": 0.0
     }
   },
   {
-    "timestamp": 1788571556,
+    "timestamp": 1788720257,
     "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "correlation_break",
+    "symbol": "DUSKUSDT",
+    "skill": "news_risk",
     "exchange": {
       "original_quote_usdc": 0.15,
-      "client_claimed_original_quote_usdc": 999.0,
+      "client_claimed_original_quote_usdc": 0.15,
       "buyer_counter_offer_usdc": 0.14,
-      "buyer_reason": "WITHIN_15_PERCENT",
+      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
       "accepted": true,
       "provider_response": "Counter-offer accepted. Discount: 6.7%",
       "discount_pct": 6.67
     }
   },
   {
-    "timestamp": 1788571880,
+    "timestamp": 1788720327,
     "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
+    "symbol": "DUSKUSDT",
     "skill": "news_risk",
     "exchange": {
-      "original_quote_usdc": 0.05,
-      "client_claimed_original_quote_usdc": 0.05,
-      "buyer_counter_offer_usdc": 0.05,
+      "original_quote_usdc": 0.07,
+      "client_claimed_original_quote_usdc": 0.07,
+      "buyer_counter_offer_usdc": 0.07,
       "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
       "accepted": true,
       "provider_response": "Counter-offer accepted. Discount: 0.0%",
@@ -130,63 +60,18 @@
     }
   },
   {
-    "timestamp": 1788572992,
+    "timestamp": 1788720364,
     "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
+    "symbol": "DOGEUSDT",
     "skill": "news_risk",
     "exchange": {
-      "original_quote_usdc": 0.1,
-      "client_claimed_original_quote_usdc": 5.0,
-      "buyer_counter_offer_usdc": 4.0,
-      "buyer_reason": "testing",
-      "accepted": false,
-      "provider_response": "Counter-offer cannot exceed original quote",
-      "discount_pct": -3900.0
-    }
-  },
-  {
-    "timestamp": 1788620775,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.1,
-      "client_claimed_original_quote_usdc": 0.01,
-      "buyer_counter_offer_usdc": 0.135,
-      "buyer_reason": "testing",
-      "accepted": false,
-      "provider_response": "Counter-offer cannot exceed original quote",
-      "discount_pct": -35.0
-    }
-  },
-  {
-    "timestamp": 1788620831,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.25,
-      "client_claimed_original_quote_usdc": 0.01,
-      "buyer_counter_offer_usdc": 0.225,
-      "buyer_reason": "testing",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 10.0%",
-      "discount_pct": 10.0
-    }
-  },
-  {
-    "timestamp": 1788620935,
-    "provider": "provider1_standard",
-    "symbol": "SOLUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.1,
-      "client_claimed_original_quote_usdc": 0.1,
-      "buyer_counter_offer_usdc": 0.1,
+      "original_quote_usdc": 0.15,
+      "client_claimed_original_quote_usdc": 0.15,
+      "buyer_counter_offer_usdc": 0.14,
       "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
       "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 0.0%",
-      "discount_pct": 0.0
+      "provider_response": "Counter-offer accepted. Discount: 6.7%",
+      "discount_pct": 6.67
     }
   }
 ]

@@ -226,5 +226,6 @@ __marimo__/
 .env
 
 # Database
-database/*.db
+**/database/*.db
 *.sqlite3
+backups/

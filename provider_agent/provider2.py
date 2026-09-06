@@ -19,6 +19,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from orchestrator_agent.negotiation_handler import NegotiationManager, NegotiationSchema
 from provider_agent.llm_pricing import demand_signals, quote_price as llm_quote_price, record_provider_receipt
+from provider_agent.skill_news_risk import ASSET_NAME_MAP, is_article_relevant
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env", override=True)
@@ -277,13 +278,18 @@ def skill_news_risk():
     risk_score = 0.0
     flagged = set()
 
+    search_ok = True
     if TAVILY_API_KEY and not TAVILY_API_KEY.startswith("your_"):
         try:
+            full_name = ASSET_NAME_MAP.get(clean_sym, clean_sym)
+            identifiers = [clean_sym.lower()] + ([full_name.lower()] if full_name.lower() != clean_sym.lower() else [])
             t_res = requests.post(
                 "https://api.tavily.com/search",
                 json={
                     "api_key": TAVILY_API_KEY,
-                    "query": f"{clean_sym} cryptocurrency exploit hack vulnerability lawsuit sec investigation",
+                    "query": f'"{full_name}" crypto (exploit OR hack OR lawsuit OR outage OR vulnerability OR "sec")',
+                    "topic": "news",
+                    "days": 3,
                     "search_depth": "basic",
                     "max_results": 5
                 },
@@ -294,6 +300,9 @@ def skill_news_risk():
             for art in t_res.get("results", []):
                 snippet = art.get("content", "")
                 title = art.get("title", "")
+                full_text = f"{title} {snippet}"
+                if not is_article_relevant(full_text, identifiers):
+                    continue
                 matched = [w for w in keywords if w in snippet.lower() or w in title.lower()]
                 if matched:
                     flagged.update(matched)
@@ -305,16 +314,26 @@ def skill_news_risk():
                     })
             risk_score = min(len(evidence_list) * 0.25, 1.0)
         except Exception as e:
-            evidence_list.append({"title": "Tavily Search Error", "snippet": str(e), "matched_terms": []})
+            print(f"[!] Tavily news search failed: {e}")
+            search_ok = False
 
-    if not evidence_list:
+    if not search_ok:
+        risk_level = "UNKNOWN"
+        risk_score = None
+        evidence_list = [{
+            "title": "News check unavailable",
+            "snippet": "The live news search could not complete this run; treat this result as inconclusive, not as a confirmed low-risk signal.",
+            "matched_terms": []
+        }]
+    elif not evidence_list:
         evidence_list.append({
             "title": f"No active exploits or legal actions detected for {clean_sym}",
             "snippet": "Automated security scanners report normal operational telemetry across public channels.",
             "matched_terms": []
         })
-
-    risk_level = "CRITICAL" if risk_score >= 0.75 else ("ELEVATED" if risk_score >= 0.25 else "LOW")
+        risk_level = "LOW"
+    else:
+        risk_level = "CRITICAL" if risk_score >= 0.75 else ("ELEVATED" if risk_score >= 0.25 else "LOW")
 
     return jsonify({
         "data": {

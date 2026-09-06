@@ -29,6 +29,7 @@ def run_performance_audit():
         print(f"[!] Error loading ledger: {e}")
         return
 
+    entries = [e for e in entries if e.get("receipt_type") != "provider_pricing"]
     if not entries:
         print("[!] Purchase ledger is empty.")
         return

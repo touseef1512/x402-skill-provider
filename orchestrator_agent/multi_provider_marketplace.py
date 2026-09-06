@@ -158,7 +158,12 @@ class MultiProviderMarketplace:
         log_file = ROOT_DIR / "marketplace_comparison.json"
         logs = []
         if log_file.exists():
-            logs = json.loads(log_file.read_text())
+            try:
+                loaded = json.loads(log_file.read_text())
+                if isinstance(loaded, list):
+                    logs = loaded
+            except (OSError, json.JSONDecodeError):
+                logs = []
         logs.append(self.comparison_log)
         log_file.write_text(json.dumps(logs, indent=2))
         
