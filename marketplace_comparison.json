@@ -1,18 +1,18 @@
 [
   {
-    "timestamp": 1788719650,
+    "timestamp": 1788724468,
     "symbol": "SOLUSDT",
     "comparison_table": [
       [
         "news_risk",
         "$0.05",
+        "$0.15",
         "$0.05",
-        "$0.15",
         "\u2713 provider1_standard"
       ],
       [
         "correlation_break",
-        "$0.10",
+        "$0.15",
         "$0.15",
         "$0.15",
         "\u2713 provider1_standard"
@@ -29,134 +29,6 @@
       "news_risk": "provider1_standard",
       "correlation_break": "provider1_standard",
       "deep_forensic_risk": "provider2_speed_specialist"
-    }
-  },
-  {
-    "timestamp": 1788719772,
-    "symbol": "ETHUSDT",
-    "comparison_table": [
-      [
-        "news_risk",
-        "$0.05",
-        "$0.15",
-        "$0.15",
-        "\u2713 provider1_standard"
-      ],
-      [
-        "correlation_break",
-        "$0.15",
-        "$0.45",
-        "$0.45",
-        "\u2713 provider1_standard"
-      ],
-      [
-        "deep_forensic_risk",
-        "$0.75",
-        "$0.45",
-        "$0.45",
-        "\u2713 provider2_speed_specialist"
-      ]
-    ],
-    "selected_providers": {
-      "news_risk": "provider1_standard",
-      "correlation_break": "provider1_standard",
-      "deep_forensic_risk": "provider2_speed_specialist"
-    }
-  },
-  {
-    "timestamp": 1788720257,
-    "symbol": "DUSKUSDT",
-    "comparison_table": [
-      [
-        "news_risk",
-        "$0.15",
-        "$0.10",
-        "$0.10",
-        "\u2713 provider2_speed_specialist"
-      ],
-      [
-        "correlation_break",
-        "$0.25",
-        "$0.15",
-        "$0.15",
-        "\u2713 provider2_speed_specialist"
-      ],
-      [
-        "deep_forensic_risk",
-        "$0.75",
-        "$0.45",
-        "$0.45",
-        "\u2713 provider2_speed_specialist"
-      ]
-    ],
-    "selected_providers": {
-      "news_risk": "provider2_speed_specialist",
-      "correlation_break": "provider2_speed_specialist",
-      "deep_forensic_risk": "provider2_speed_specialist"
-    }
-  },
-  {
-    "timestamp": 1788720327,
-    "symbol": "DUSKUSDT",
-    "comparison_table": [
-      [
-        "news_risk",
-        "$0.07",
-        "$0.15",
-        "$0.45",
-        "\u2713 provider1_standard"
-      ],
-      [
-        "correlation_break",
-        "$0.15",
-        "$0.15",
-        "$0.45",
-        "\u2713 provider1_standard"
-      ],
-      [
-        "deep_forensic_risk",
-        "$0.75",
-        "$0.75",
-        "$0.45",
-        "\u2713 provider3_value_hunter"
-      ]
-    ],
-    "selected_providers": {
-      "news_risk": "provider1_standard",
-      "correlation_break": "provider1_standard",
-      "deep_forensic_risk": "provider3_value_hunter"
-    }
-  },
-  {
-    "timestamp": 1788720364,
-    "symbol": "DOGEUSDT",
-    "comparison_table": [
-      [
-        "news_risk",
-        "$0.15",
-        "$0.45",
-        "$0.15",
-        "\u2713 provider1_standard"
-      ],
-      [
-        "correlation_break",
-        "$0.15",
-        "$0.45",
-        "$0.30",
-        "\u2713 provider1_standard"
-      ],
-      [
-        "deep_forensic_risk",
-        "$0.25",
-        "$0.75",
-        "$0.45",
-        "\u2713 provider1_standard"
-      ]
-    ],
-    "selected_providers": {
-      "news_risk": "provider1_standard",
-      "correlation_break": "provider1_standard",
-      "deep_forensic_risk": "provider1_standard"
     }
   }
 ]

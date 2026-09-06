@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": 1788719650,
+    "timestamp": 1788724468,
     "provider": "provider1_standard",
     "symbol": "SOLUSDT",
     "skill": "news_risk",
@@ -12,66 +12,6 @@
       "accepted": true,
       "provider_response": "Counter-offer accepted. Discount: 0.0%",
       "discount_pct": 0.0
-    }
-  },
-  {
-    "timestamp": 1788719772,
-    "provider": "provider1_standard",
-    "symbol": "ETHUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.05,
-      "client_claimed_original_quote_usdc": 0.05,
-      "buyer_counter_offer_usdc": 0.05,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 0.0%",
-      "discount_pct": 0.0
-    }
-  },
-  {
-    "timestamp": 1788720257,
-    "provider": "provider1_standard",
-    "symbol": "DUSKUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.15,
-      "client_claimed_original_quote_usdc": 0.15,
-      "buyer_counter_offer_usdc": 0.14,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 6.7%",
-      "discount_pct": 6.67
-    }
-  },
-  {
-    "timestamp": 1788720327,
-    "provider": "provider1_standard",
-    "symbol": "DUSKUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.07,
-      "client_claimed_original_quote_usdc": 0.07,
-      "buyer_counter_offer_usdc": 0.07,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 0.0%",
-      "discount_pct": 0.0
-    }
-  },
-  {
-    "timestamp": 1788720364,
-    "provider": "provider1_standard",
-    "symbol": "DOGEUSDT",
-    "skill": "news_risk",
-    "exchange": {
-      "original_quote_usdc": 0.15,
-      "client_claimed_original_quote_usdc": 0.15,
-      "buyer_counter_offer_usdc": 0.14,
-      "buyer_reason": "Live demo budget constraint; requesting a 5% one-round discount.",
-      "accepted": true,
-      "provider_response": "Counter-offer accepted. Discount: 6.7%",
-      "discount_pct": 6.67
     }
   }
 ]
